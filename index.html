@@ -35,7 +35,7 @@
   </form>
 
   <div id="output" class="result" aria-live="polite">
-    <div class="small">No calculation yet. Provide a <code>to</code> date in the query string or use the controls above.</div>
+    <div class="small">No calculation yet. Provide a <code>to</code> date in the query string(s) or use the controls above.</div>
   </div>
 
   <footer>
@@ -189,3 +189,43 @@ function renderResult(fromStr, toStr) {
 </script>
 </body>
 </html>
+
+<!--
+### Sample URLs for `https://ksrntheja.github.io/days-calc/`
+
+- **Simple future target (from today)**  
+  `https://ksrntheja.github.io/days-calc/?to=2030-01-01`
+
+- **Explicit from and to (from earlier to later)**  
+  `https://ksrntheja.github.io/days-calc/?from=2025-11-29&to=2030-01-01`
+
+- **Target in the past (from today)**  
+  `https://ksrntheja.github.io/days-calc/?to=2010-06-15`
+
+- **To earlier than from (shows "ago")**  
+  `https://ksrntheja.github.io/days-calc/?from=2030-01-01&to=2025-11-29`
+
+- **Same day (zero difference)**  
+  `https://ksrntheja.github.io/days-calc/?from=2025-11-29&to=2025-11-29`
+
+- **Leap day target**  
+  `https://ksrntheja.github.io/days-calc/?to=2028-02-29`
+
+- **End-of-month to end-of-month example**  
+  `https://ksrntheja.github.io/days-calc/?from=2025-02-28&to=2025-03-31`
+
+- **Long-range future date**  
+  `https://ksrntheja.github.io/days-calc/?to=2050-12-31`
+
+- **Short range (a few days)**  
+  `https://ksrntheja.github.io/days-calc/?from=2025-12-20&to=2025-12-25`
+
+- **Only from provided (no to) — page will prompt for To**  
+  `https://ksrntheja.github.io/days-calc/?from=2025-11-29`
+
+- **Invalid date example (will show error)**  
+  `https://ksrntheja.github.io/days-calc/?to=2025-02-30`
+
+- **URL without query (opens UI with today as From)**  
+  `https://ksrntheja.github.io/days-calc/`
+-->
