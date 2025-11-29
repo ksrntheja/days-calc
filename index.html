@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Time Until — Years, Months, Days</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;line-height:1.4;color:#111}
+    body{max-width:720px;margin:48px auto;padding:20px}
+    h1{font-size:1.4rem;margin:0 0 12px}
+    label{display:block;margin:12px 0 6px;font-weight:600}
+    input[type=date]{padding:8px;border:1px solid #ccc;border-radius:6px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    button{padding:8px 12px;border-radius:8px;border:0;background:#0366d6;color:#fff;cursor:pointer}
+    .result{margin-top:20px;padding:16px;border-radius:8px;background:#f6f8fb;border:1px solid #e1e4ea}
+    .muted{color:#555;font-size:0.95rem}
+    .small{font-size:0.9rem;color:#333}
+    .error{color:#b00020}
+    footer{margin-top:28px;color:#666;font-size:0.9rem}
+    pre.sample{background:#fff;border:1px dashed #ddd;padding:10px;border-radius:6px;overflow:auto}
+  </style>
+</head>
+<body>
+  <h1>Time Until — Years, Months, Days</h1>
+  <div class="muted">Provide dates via query string: <code>?to=YYYY-MM-DD</code> and optional <code>&from=YYYY-MM-DD</code>. If <code>from</code> is omitted, today is used.</div>
+
+  <form id="form" onsubmit="return false;" aria-label="Date form">
+    <label for="from">From</label>
+    <div class="row">
+      <input id="from" type="date" />
+      <label for="to" style="margin-left:8px">To</label>
+      <input id="to" type="date" />
+      <button id="calc">Calculate & Update URL</button>
+    </div>
+  </form>
+
+  <div id="output" class="result" aria-live="polite">
+    <div class="small">No calculation yet. Provide a <code>to</code> date in the query string or use the controls above.</div>
+  </div>
+
+  <footer>
+    <div>Examples:</div>
+    <pre class="sample">?to=2030-01-01
+?to=2030-01-01&from=2025-11-29</pre>
+  </footer>
+
+<script>
+/* Helper: parse query params */
+function getQueryParams() {
+  const params = new URLSearchParams(location.search);
+  return {
+    to: params.get('to'),
+    from: params.get('from')
+  };
+}
+
+/* Helper: format date to yyyy-mm-dd for inputs */
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/* Days in a month for a given year/month (month 0-11) */
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+/* Compute difference as years, months, days and totalDays.
+   fromDate and toDate are Date objects. If to < from, result will be negative values.
+*/
+function diffYMD(fromDate, toDate) {
+  // Work on copies
+  let f = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  let t = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+
+  // Determine sign
+  let sign = 1;
+  if (t < f) {
+    sign = -1;
+    // swap to compute positive difference, then apply sign
+    const tmp = f; f = t; t = tmp;
+  }
+
+  let years = t.getFullYear() - f.getFullYear();
+  let months = t.getMonth() - f.getMonth();
+  let days = t.getDate() - f.getDate();
+
+  if (days < 0) {
+    // borrow from previous month of t
+    const prevMonth = (t.getMonth() - 1 + 12) % 12;
+    const prevYear = (t.getMonth() === 0) ? t.getFullYear() - 1 : t.getFullYear();
+    days += daysInMonth(prevYear, prevMonth);
+    months -= 1;
+  }
+
+  if (months < 0) {
+    months += 12;
+    years -= 1;
+  }
+
+  // total days (signed)
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const totalDays = Math.round((toDate - fromDate) / msPerDay);
+
+  return {
+    years: years * sign,
+    months: months * sign,
+    days: days * sign,
+    totalDays: totalDays
+  };
+}
+
+/* Render result */
+function renderResult(fromStr, toStr) {
+  const out = document.getElementById('output');
+  const fromDate = new Date(fromStr);
+  const toDate = new Date(toStr);
+
+  if (isNaN(fromDate) || isNaN(toDate)) {
+    out.innerHTML = '<div class="error">Invalid date(s). Use YYYY-MM-DD format.</div>';
+    return;
+  }
+
+  const d = diffYMD(fromDate, toDate);
+  const signText = d.totalDays < 0 ? 'ago' : 'from now';
+  const absYears = Math.abs(d.years);
+  const absMonths = Math.abs(d.months);
+  const absDays = Math.abs(d.days);
+  const absTotal = Math.abs(d.totalDays);
+
+  out.innerHTML = `
+    <div class="small"><strong>From:</strong> ${fromStr} &nbsp; <strong>To:</strong> ${toStr}</div>
+    <div style="margin-top:12px;font-size:1.15rem">
+      <strong>${absYears}</strong> year(s), <strong>${absMonths}</strong> month(s), <strong>${absDays}</strong> day(s)
+    </div>
+    <div style="margin-top:8px" class="muted">
+      <strong>${absTotal}</strong> total day(s) ${signText}.
+    </div>
+  `;
+}
+
+/* Initialize UI and read query params */
+(function init() {
+  const params = getQueryParams();
+  const inputFrom = document.getElementById('from');
+  const inputTo = document.getElementById('to');
+  const today = new Date();
+
+  // Default values
+  inputFrom.value = params.from || toISODate(today);
+  inputTo.value = params.to || '';
+
+  // If query had a to param, auto-calc
+  if (params.to) {
+    const fromVal = inputFrom.value || toISODate(today);
+    renderResult(fromVal, params.to);
+  }
+
+  // Button handler: update URL with chosen dates and render
+  document.getElementById('calc').addEventListener('click', () => {
+    const fromVal = inputFrom.value || toISODate(today);
+    const toVal = inputTo.value;
+    if (!toVal) {
+      document.getElementById('output').innerHTML = '<div class="error">Please select a "To" date.</div>';
+      return;
+    }
+    // Update URL without reloading
+    const url = new URL(location.href);
+    url.searchParams.set('to', toVal);
+    url.searchParams.set('from', fromVal);
+    history.replaceState(null, '', url.toString());
+    renderResult(fromVal, toVal);
+  });
+
+  // Also recalc when user changes inputs (optional)
+  inputFrom.addEventListener('change', () => {
+    if (inputTo.value) {
+      document.getElementById('calc').click();
+    }
+  });
+  inputTo.addEventListener('change', () => {
+    if (inputTo.value) {
+      document.getElementById('calc').click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
